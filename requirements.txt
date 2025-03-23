@@ -1,0 +1,6 @@
+Django==4.2.0  # 使用您的Django版本
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+django-cors-headers==4.3.1
+django-storages[boto3]==1.14.2  # 如果使用Supabase Storage
+boto3==1.28.44 
