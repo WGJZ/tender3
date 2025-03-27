@@ -21,5 +21,5 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('tender_app.urls')),  # 所有 API 路由都以 /api/ 开头
+    path('api/', include('tender_app.urls')),  # All API routes start with /api/ prefix
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

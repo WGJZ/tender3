@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# 加载.env文件
+# Load .env file
 load_dotenv()
 
 INSTALLED_APPS = [
@@ -32,7 +32,26 @@ DATABASES = {
     }
 }
 
-# Supabase Storage配置
+# Supabase Storage configuration
+SUPABASE_URL = 'https://your-supabase-url.supabase.co'
+SUPABASE_KEY = 'your-supabase-key'
+SUPABASE_BUCKET = 'your-bucket-name'
+
+# Add allowed hosts
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '.railway.app',  # Allow all railway subdomains
+    'your-app-name.railway.app'  # Add the Railway generated domain
+]
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://your-frontend-domain.vercel.app",  # Replace later with actual Vercel domain
+]
+
+# Supabase Storage configuration
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 AWS_STORAGE_BUCKET_NAME = 'bid_documents'
 AWS_S3_ENDPOINT_URL = os.getenv('SUPABASE_URL') + '/storage/v1'
@@ -41,18 +60,4 @@ AWS_SECRET_ACCESS_KEY = os.getenv('SUPABASE_KEY')
 AWS_S3_CUSTOM_DOMAIN = os.getenv('SUPABASE_URL') + '/storage/v1/object/public'
 AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = 'public-read'
-
-# 添加允许的主机
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '.railway.app',  # 允许所有railway子域名
-    'your-app-name.railway.app'  # 添加Railway生成的域名
-]
-
-# CORS设置
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://your-frontend-domain.vercel.app",  # 稍后替换为实际的Vercel域名
-] 
+AWS_DEFAULT_ACL = 'public-read' 

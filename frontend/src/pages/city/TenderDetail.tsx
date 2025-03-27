@@ -130,6 +130,7 @@ const TenderDetail: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
   const [documentPreviewUrl, setDocumentPreviewUrl] = useState<string | null>(null);
   const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [userType, setUserType] = useState<'CITY' | 'COMPANY'>('CITY');
 
   useEffect(() => {
@@ -249,27 +250,47 @@ const TenderDetail: React.FC = () => {
         throw new Error('Failed to select winner');
       }
 
-      // Update local state
-      setBids(prev => prev.map(bid => ({
-        ...bid,
-        status: bid.id === selectedBid.id ? 'ACCEPTED' : 'REJECTED',
-        is_winner: bid.id === selectedBid.id
-      })));
-
+      const result = await response.json();
+      console.log('Winner selection result:', result);
+      
+      // Update tender and bid data to reflect the selection
       if (tender) {
         setTender({
           ...tender,
-          status: 'AWARDED'
+          status: 'AWARDED',
         });
       }
 
+      // Update the selected bid to show it as winner
+      setBids((prevBids) =>
+        prevBids.map((bid) => ({
+          ...bid,
+          is_winner: bid.id === selectedBid.id,
+          status: bid.id === selectedBid.id ? 'ACCEPTED' : 'REJECTED',
+        }))
+      );
+      
+      // Update winner information with full company details
+      const winningBid = selectedBid;
+      const companyDetails = selectedBid.company_profile || {
+        company_name: selectedBid.company_name,
+      };
+      
+      setSelectedCompany({
+        ...winningBid,
+        company_profile: companyDetails
+      });
+
       setActionSuccess('Winner selected successfully!');
-      setTimeout(() => setActionSuccess(''), 3000);
+      setConfirmationDialog(false);
+
+      // Wait a moment, then refresh the data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.error('Error selecting winner:', error);
       setError('Failed to select winner. Please try again.');
-      setTimeout(() => setError(''), 3000);
-    } finally {
       setConfirmationDialog(false);
     }
   };
@@ -311,8 +332,76 @@ const TenderDetail: React.FC = () => {
   };
 
   const handleViewDocument = (documentUrl: string) => {
-    setDocumentPreviewUrl(documentUrl);
+    setSelectedDocument(documentUrl);
     setDocumentPreviewOpen(true);
+  };
+
+  const renderWinnerSection = () => {
+    if (!tender || tender.status !== 'AWARDED') return null;
+    
+    const winningBid = bids.find(bid => bid.is_winner);
+    if (!winningBid) return null;
+    
+    const companyProfile = winningBid.company_profile;
+    
+    return (
+      <Box sx={{ mt: 3, mb: 4 }}>
+        <Typography variant="h5" gutterBottom sx={{ borderBottom: '2px solid #FFD700', pb: 1, color: '#333' }}>
+          Awarded Information
+        </Typography>
+        
+        <Paper sx={{ p: 3, border: '1px solid #FFD700', borderRadius: 2 }}>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+            Winning Company
+          </Typography>
+          <Typography variant="body1" gutterBottom>
+            {companyProfile?.company_name || winningBid.company_name}
+          </Typography>
+          
+          {companyProfile && (
+            <Box sx={{ mt: 2 }}>
+              {companyProfile.contact_email && (
+                <Typography variant="body2">
+                  <strong>Email:</strong> {companyProfile.contact_email}
+                </Typography>
+              )}
+              {companyProfile.phone_number && (
+                <Typography variant="body2">
+                  <strong>Phone:</strong> {companyProfile.phone_number}
+                </Typography>
+              )}
+              {companyProfile.address && (
+                <Typography variant="body2">
+                  <strong>Address:</strong> {companyProfile.address}
+                </Typography>
+              )}
+              {companyProfile.registration_number && (
+                <Typography variant="body2">
+                  <strong>Registration Number:</strong> {companyProfile.registration_number}
+                </Typography>
+              )}
+            </Box>
+          )}
+          
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+              Winning Bid
+            </Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#4CAF50' }}>
+              €{winningBid.bidding_price.toLocaleString()}
+            </Typography>
+            
+            {winningBid.additional_notes && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                  {winningBid.additional_notes}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </Paper>
+      </Box>
+    );
   };
 
   if (loading) {
@@ -417,6 +506,8 @@ const TenderDetail: React.FC = () => {
             )}
           </TenderInfoCard>
         )}
+
+        {renderWinnerSection()}
 
         <Typography variant="h6" sx={{ mt: 4, mb: 2, fontFamily: 'Outfit', fontWeight: 400 }}>
           {userType === 'CITY' ? `Submitted Bids (${bids.length})` : 'Your Submitted Bid'}
@@ -577,17 +668,17 @@ const TenderDetail: React.FC = () => {
       >
         <DialogTitle>Document Preview</DialogTitle>
         <DialogContent>
-          {documentPreviewUrl ? (
-            documentPreviewUrl.endsWith('.pdf') ? (
+          {selectedDocument ? (
+            selectedDocument.endsWith('.pdf') ? (
               <iframe 
-                src={`http://localhost:8000${documentPreviewUrl}`}
+                src={`http://localhost:8000${selectedDocument}`}
                 style={{ width: '100%', height: '70vh' }}
                 title="Document Preview"
               />
             ) : (
               <Box sx={{ textAlign: 'center' }}>
                 <img 
-                  src={`http://localhost:8000${documentPreviewUrl}`}
+                  src={`http://localhost:8000${selectedDocument}`}
                   alt="Document Preview"
                   style={{ maxWidth: '100%', maxHeight: '70vh' }}
                 />
@@ -602,7 +693,7 @@ const TenderDetail: React.FC = () => {
           <Button 
             variant="contained" 
             color="primary"
-            href={`http://localhost:8000${documentPreviewUrl}`}
+            href={`http://localhost:8000${selectedDocument}`}
             target="_blank"
           >
             Download

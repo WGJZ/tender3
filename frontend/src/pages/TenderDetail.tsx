@@ -180,6 +180,17 @@ const TenderDetail: React.FC = () => {
   const [confirmSelectWinnerDialogOpen, setConfirmSelectWinnerDialogOpen] = useState(false);
   const [winningBid, setWinningBid] = useState<Bid | null>(null);
   const [categoryName, setCategoryName] = useState<string>("");
+  const [winnerInfo, setWinnerInfo] = useState<{
+    winner: string;
+    amount: number;
+    date: string;
+    email: string;
+    phone: string;
+    address: string;
+    registration_number: string;
+    description: string;
+  } | null>(null);
+  const [winnerLoading, setWinnerLoading] = useState(false);
 
   useEffect(() => {
     // Determine user type from localStorage
@@ -838,6 +849,37 @@ const TenderDetail: React.FC = () => {
     }
   }, [tender, userType]);
 
+  const fetchWinner = async (id: string) => {
+    try {
+      setWinnerLoading(true);
+      const response = await fetch(`http://localhost:8000/api/tenders/${id}/winner/`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Winner data:", data);
+        setWinnerInfo({
+          winner: data.company_name || data.winner,
+          amount: data.winning_price,
+          date: data.award_date,
+          email: data.contact_email,
+          phone: data.phone,
+          address: data.address,
+          registration_number: data.registration_number,
+          description: data.description
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching winner:", error);
+    } finally {
+      setWinnerLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tenderId && tender && tender.status === 'AWARDED') {
+      fetchWinner(tenderId);
+    }
+  }, [tenderId, tender]);
+
   if (loading) {
     return (
       <PageContainer>
@@ -1143,16 +1185,34 @@ const TenderDetail: React.FC = () => {
           <TenderHistory tenderId={tenderId || ''} />
         </TabPanel>
 
-        {winningBid && (
+        {/* Winner Info Tab */}
+        {tender && tender.status === 'AWARDED' && (
           <TabPanel value={tabValue} index={canViewBids ? 3 : 2}>
-            <WinningBidInfo 
-              bidId={winningBid.id}
-              companyName={winningBid.company_name}
-              biddingPrice={winningBid.bidding_price}
-              submissionDate={winningBid.submission_date}
-              awardDate={tender.winner_date}
-              companyProfile={winningBid.company_profile}
-            />
+            {winnerLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress />
+              </Box>
+            ) : winnerInfo ? (
+              <WinningBidInfo
+                companyName={winnerInfo.winner}
+                biddingPrice={winnerInfo.amount}
+                awardDate={winnerInfo.date}
+                email={winnerInfo.email}
+                phone={winnerInfo.phone}
+                address={winnerInfo.address}
+              />
+            ) : winningBid ? (
+              <WinningBidInfo
+                bidId={winningBid.id}
+                companyName={winningBid.company_name}
+                biddingPrice={winningBid.bidding_price}
+                submissionDate={winningBid.submission_date}
+                awardDate={tender.winner_date}
+                companyProfile={winningBid.company_profile}
+              />
+            ) : (
+              <Typography>Winner information could not be loaded.</Typography>
+            )}
           </TabPanel>
         )}
 

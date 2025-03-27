@@ -28,26 +28,69 @@ logger = logging.getLogger(__name__)
 
 # Public API for getting winner information - accessible without authentication
 class PublicWinnerView(APIView):
+    """
+    API View to get information about a tender's winning bid.
+    This view is accessible without authentication.
+    """
     permission_classes = [AllowAny]
     
-    def get(self, request, tender_id):
+    def get(self, request, pk=None):
         try:
-            tender = Tender.objects.get(pk=tender_id)
-            if tender.status == 'AWARDED':
-                bids = Bid.objects.filter(tender=tender)
-                winning_bid = bids.filter(status='AWARDED').first()
-                if winning_bid:
-                    return Response({
-                        'winner': winning_bid.company.name,
-                        'winning_price': winning_bid.bidding_price,
-                        'award_date': tender.winner_date
-                    })
-                return Response({'detail': 'No winning bid found'}, status=status.HTTP_404_NOT_FOUND)
-            return Response({'detail': 'Tender has not been awarded yet'}, status=status.HTTP_400_BAD_REQUEST)
-        except Tender.DoesNotExist:
-            return Response({'detail': 'Tender not found'}, status=status.HTTP_404_NOT_FOUND)
+            # Get the tender by ID
+            tender = get_object_or_404(Tender, pk=pk)
+            
+            # Check if tender is awarded
+            if tender.status != 'AWARDED':
+                return Response(
+                    {'detail': 'This tender has not been awarded yet'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get the winning bid
+            winning_bid = Bid.objects.filter(tender=tender, is_winner=True).first()
+            
+            if not winning_bid:
+                return Response(
+                    {'detail': 'No winning bid found for this tender'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get company profile if available
+            try:
+                company_profile = CompanyProfile.objects.get(user=winning_bid.company)
+                company_data = {
+                    'company_name': company_profile.company_name,
+                    'contact_email': company_profile.contact_email,
+                    'phone': company_profile.phone_number,
+                    'address': company_profile.address,
+                    'registration_number': company_profile.registration_number,
+                    'description': company_profile.description
+                }
+            except CompanyProfile.DoesNotExist:
+                company_data = {
+                    'company_name': winning_bid.company_name,
+                    'contact_email': winning_bid.company.email if winning_bid.company else None
+                }
+            
+            # Return winner information
+            return Response({
+                'company_name': company_data['company_name'],
+                'contact_email': company_data['contact_email'],
+                'phone': company_data.get('phone'),
+                'address': company_data.get('address'),
+                'registration_number': company_data.get('registration_number'),
+                'description': company_data.get('description'),
+                'winning_price': winning_bid.bidding_price,
+                'award_date': tender.winner_date,
+                'submission_date': winning_bid.submission_date
+            })
+            
         except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error fetching winner info for tender {pk}: {str(e)}")
+            return Response(
+                {'detail': f'Error fetching winner information: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -455,10 +498,8 @@ class BidViewSet(viewsets.ModelViewSet):
             tender = bid.tender
             logger.info(f"Bid {bid.id} is for tender {tender.id}: {tender.title}, current status: {tender.status}")
             
-            # Check if deadline has passed
-            if not is_deadline_passed(tender.submission_deadline):
-                logger.warning(f"Attempted to select winner for tender {tender.id} but deadline has not passed")
-                return Response({"detail": "Cannot select winner before submission deadline."}, status=400)
+            # Removing deadline check to improve usability
+            # City users should be able to select a winner at their discretion
             
             # Check if tender is already awarded to prevent changes
             if tender.status == 'AWARDED':

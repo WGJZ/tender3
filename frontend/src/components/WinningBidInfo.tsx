@@ -38,12 +38,15 @@ interface CompanyProfile {
 }
 
 interface WinningBidProps {
-  bidId: string;
+  bidId?: string;
   companyName: string;
   biddingPrice: number;
-  submissionDate: string;
+  submissionDate?: string;
   awardDate?: string;
   companyProfile?: CompanyProfile;
+  email?: string;
+  phone?: string;
+  address?: string;
 }
 
 const WinningBidInfo: React.FC<WinningBidProps> = ({
@@ -52,55 +55,34 @@ const WinningBidInfo: React.FC<WinningBidProps> = ({
   biddingPrice,
   submissionDate,
   awardDate,
-  companyProfile
+  companyProfile,
+  email,
+  phone,
+  address
 }) => {
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
-
   return (
     <WinnerCard>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold' }}>
-          Winning Bid
-        </Typography>
-        <WinnerChip
-          icon={<EmojiEventsIcon />}
-          label="WINNER"
-          size="small"
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+        <WinnerChip 
+          icon={<EmojiEventsIcon />} 
+          label="WINNING BID" 
         />
       </Box>
       
-      <Divider sx={{ mb: 2 }} />
-      
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-        <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
-          <BusinessIcon fontSize="large" />
-        </Avatar>
-        
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h6" sx={{ mb: 0.5 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h6" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <BusinessIcon sx={{ color: '#FFD700' }} /> 
             {companyName}
           </Typography>
           
-          <Typography variant="body1" color="primary" fontWeight="bold" sx={{ mb: 2 }}>
-            Bid Amount: {formatPrice(biddingPrice)}
-          </Typography>
-          
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-            gap: 2
-          }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mt: 2 }}>
             <Box>
               <Typography variant="body2" color="text.secondary">
-                Submission Date
+                Winning Bid
               </Typography>
-              <Typography variant="body2">
-                {formatDate(submissionDate)}
+              <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#4CAF50' }}>
+                €{biddingPrice.toLocaleString()}
               </Typography>
             </Box>
             
@@ -109,23 +91,22 @@ const WinningBidInfo: React.FC<WinningBidProps> = ({
                 <Typography variant="body2" color="text.secondary">
                   Award Date
                 </Typography>
-                <Typography variant="body2">
+                <Typography variant="body1">
                   {formatDate(awardDate)}
                 </Typography>
               </Box>
             )}
+          </Box>
+          
+          <Divider sx={{ my: 2 }} />
+          
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Contact Information
+            </Typography>
             
-            {companyProfile && (
+            {companyProfile ? (
               <>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Registration Number
-                  </Typography>
-                  <Typography variant="body2">
-                    {companyProfile.registration_number}
-                  </Typography>
-                </Box>
-                
                 <Box>
                   <Typography variant="body2" color="text.secondary">
                     Contact Email
@@ -134,7 +115,7 @@ const WinningBidInfo: React.FC<WinningBidProps> = ({
                     {companyProfile.contact_email}
                   </Typography>
                 </Box>
-                
+
                 {companyProfile.phone_number && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -145,7 +126,7 @@ const WinningBidInfo: React.FC<WinningBidProps> = ({
                     </Typography>
                   </Box>
                 )}
-                
+
                 {companyProfile.address && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
@@ -153,6 +134,41 @@ const WinningBidInfo: React.FC<WinningBidProps> = ({
                     </Typography>
                     <Typography variant="body2">
                       {companyProfile.address}
+                    </Typography>
+                  </Box>
+                )}
+              </>
+            ) : (
+              <>
+                {email && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Contact Email
+                    </Typography>
+                    <Typography variant="body2">
+                      {email}
+                    </Typography>
+                  </Box>
+                )}
+
+                {phone && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Phone Number
+                    </Typography>
+                    <Typography variant="body2">
+                      {phone}
+                    </Typography>
+                  </Box>
+                )}
+
+                {address && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Address
+                    </Typography>
+                    <Typography variant="body2">
+                      {address}
                     </Typography>
                   </Box>
                 )}

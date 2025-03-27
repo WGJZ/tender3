@@ -1,26 +1,29 @@
+import sys
+import os
+import django
+from django.db import connection
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from django.db import connections
-from django.db.utils import OperationalError
 
-def test_all():
-    # 测试数据库
-    try:
-        connections['default'].cursor()
-        print("✅ 数据库连接成功！")
-    except OperationalError as e:
-        print(f"❌ 数据库连接失败: {e}")
+# Test database
+try:
+    connection.ensure_connection()
+    print("✅ Database connection successful!")
+except Exception as e:
+    print(f"❌ Database connection failed: {e}")
 
-    # 测试存储
-    try:
-        path = default_storage.save('test.txt', ContentFile('Storage test successful!'))
-        print(f"✅ 文件上传成功: {path}")
-        url = default_storage.url(path)
-        print(f"📁 文件URL: {url}")
-        default_storage.delete(path)
-        print("🗑️ 测试文件已删除")
-    except Exception as e:
-        print(f"❌ 存储测试失败: {e}")
+# Test storage
+try:
+    path = default_storage.save('test_file.txt', ContentFile(b'test content'))
+    url = default_storage.url(path)
+    print(f"✅ File upload successful: {path}")
+    
+    print(f"📁 File URL: {url}")
+    
+    default_storage.delete(path)
+    print("🗑️ Test file deleted")
+except Exception as e:
+    print(f"❌ Storage test failed: {e}")
 
 if __name__ == "__main__":
     test_all() 

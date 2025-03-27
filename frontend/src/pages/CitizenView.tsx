@@ -35,6 +35,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import InfoIcon from '@mui/icons-material/Info';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const PageContainer = styled('div')({
   width: '100%',
@@ -147,202 +148,32 @@ const CitizenView: React.FC = () => {
 
   const fetchTenders = async () => {
     try {
-      setError('');
       setLoading(true);
-      console.log('Attempting to fetch tenders');
+      setError('');
       
-      const token = localStorage.getItem('token');
-      const headers: HeadersInit = {};
-      
-      if (token) {
-        console.log('Using authentication token for API request');
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      // Add cache busting parameter to prevent caching issues
+      // Get fresh data with cache buster to prevent stale data
       const cacheBuster = `?cacheBust=${new Date().getTime()}`;
-      const apiUrl = `http://localhost:8000/api/tenders/${cacheBuster}`;
+      const response = await fetch(`http://localhost:8000/api/tenders/${cacheBuster}`);
       
-      console.log(`Making API request to: ${apiUrl}`);
-      
-      // First try the authenticated endpoint if we have a token
-      const response = await fetch(apiUrl, {
-        headers,
-        // Add cache control headers
-        cache: 'no-cache',
-      });
-      
-      console.log(`API response status: ${response.status}`);
-      
-      if (!response.ok) {
-        if (response.status === 500) {
-          console.error(`Server error ${response.status}: The server encountered an internal error`);
-          // Try to get more details about the error
-          try {
-            const errorText = await response.text();
-            console.error('Error details:', errorText);
-          } catch (e) {
-            console.error('Could not read error details');
-          }
-          
-          // Retry once after 1 second delay
-          console.log('Retrying after delay...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          const retryResponse = await fetch(apiUrl, {
-            headers,
-            cache: 'no-cache',
-          });
-          
-          if (retryResponse.ok) {
-            const data = await retryResponse.json();
-            console.log('Retry successful! Fetched tenders:', data);
-            setTenders(data);
-            setLoading(false);
-            return;
-          } else {
-            console.error(`Retry failed with status ${retryResponse.status}`);
-          }
-        } else {
-          console.error(`API request failed with status: ${response.status}`);
-        }
-        
-        // If both approaches fail, load sample data as fallback
-        console.error('API requests failed, using sample data');
-        const sampleData = getSampleTenders();
-        setTenders(sampleData);
-        setLoading(false);
-        return;
+      if (response.ok) {
+        const data = await response.json();
+        setTenders(data);
+        setFilteredTenders(data);
+        console.log(`Loaded ${data.length} tenders from API`);
+      } else {
+        console.error('Failed to fetch tenders:', response.status, response.statusText);
+        setError('Failed to load tenders. Please try again later.');
+        setTenders([]);
+        setFilteredTenders([]);
       }
-
-      let data;
-      try {
-        data = await response.json();
-        console.log('Successfully parsed JSON data');
-      } catch (e) {
-        console.error('Failed to parse JSON response:', e);
-        console.error('Response was:', await response.text());
-        const sampleData = getSampleTenders();
-        setTenders(sampleData);
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Fetched tenders:', data);
-      setTenders(data);
     } catch (error) {
       console.error('Error fetching tenders:', error);
-      setError('Failed to load tenders. Using sample data instead.');
-      const sampleData = getSampleTenders();
-      setTenders(sampleData);
+      setError('Error connecting to server. Please check your connection and try again.');
+      setTenders([]);
+      setFilteredTenders([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Sample data function to use when API fails
-  const getSampleTenders = (): Tender[] => {
-    return [
-      {
-        id: "1",
-        title: "City Park Renovation",
-        budget: "150000",
-        category: "CONSTRUCTION",
-        notice_date: "2024-03-01",
-        submission_deadline: "2025-06-15",
-        status: "OPEN",
-        description: "Complete renovation of the central city park, including new pathways, playground equipment, and landscaping.",
-        city: "New York",
-        contact_email: "parks@example.com",
-        requirements: "Minimum 5 years of experience in public space development."
-      },
-      {
-        id: "2",
-        title: "Public School IT Infrastructure",
-        budget: "200000",
-        category: "TECHNOLOGY",
-        notice_date: "2024-02-15",
-        submission_deadline: "2025-04-30",
-        status: "OPEN",
-        description: "Upgrading IT infrastructure in 10 public schools, including networks, servers, and classroom technology.",
-        city: "Boston",
-        contact_email: "education@example.com",
-        requirements: "Experience with educational technology deployments required."
-      },
-      {
-        id: "3",
-        title: "Municipal Building Expansion",
-        budget: "500000",
-        category: "INFRASTRUCTURE",
-        notice_date: "2024-01-20",
-        submission_deadline: "2024-12-15",
-        status: "CLOSED",
-        description: "Expansion of the municipal administrative building to accommodate growing staff needs.",
-        city: "Chicago",
-        contact_email: "buildings@example.com",
-        requirements: "Licensed architects and contractors only."
-      },
-      {
-        id: "4",
-        title: "Healthcare Center Equipment",
-        budget: "300000",
-        category: "HEALTHCARE",
-        notice_date: "2024-02-10",
-        submission_deadline: "2025-03-20",
-        status: "AWARDED",
-        description: "Supply and installation of medical equipment for the new community healthcare center.",
-        city: "Los Angeles",
-        contact_email: "health@example.com",
-        requirements: "ISO certification and compliance with medical equipment standards.",
-        winner_id: "med123",
-        winner_name: "MedTech Solutions Inc.",
-        winning_bid: "278500"
-      },
-      {
-        id: "5",
-        title: "Public Transit Expansion Study",
-        budget: "120000",
-        category: "TRANSPORTATION",
-        notice_date: "2024-03-05",
-        submission_deadline: "2025-05-10",
-        status: "OPEN",
-        description: "Feasibility study for expanding the city's public transportation network to suburban areas.",
-        city: "Seattle",
-        contact_email: "transit@example.com",
-        requirements: "Transportation planning expertise and previous experience with similar studies."
-      },
-      {
-        id: "6",
-        title: "City Hall Renovation",
-        budget: "450000",
-        category: "CONSTRUCTION",
-        notice_date: "2024-01-15",
-        submission_deadline: "2024-11-30",
-        status: "AWARDED",
-        description: "Comprehensive renovation of the historic city hall building, including structural repairs and modernization of facilities.",
-        city: "Philadelphia",
-        contact_email: "cityhall@example.com",
-        requirements: "Historic building restoration experience required. Must comply with preservation guidelines.",
-        winner_id: "const456",
-        winner_name: "Heritage Construction Ltd.",
-        winning_bid: "425000"
-      },
-      {
-        id: "7",
-        title: "Public Library Upgrade",
-        budget: "240000",
-        category: "EDUCATION",
-        notice_date: "2024-01-30",
-        submission_deadline: "2024-10-15",
-        status: "AWARDED",
-        description: "Modernization of the central public library, including digital resources and accessibility improvements.",
-        city: "Denver",
-        contact_email: "library@example.com",
-        requirements: "Experience with public institution renovations and technology integration.",
-        winner_name: "City Design & Build Co.",
-        winning_bid: "235000"
-      }
-    ];
   };
 
   const applyFilters = (allTenders: Tender[], search: string, category: string, onlyOpen: boolean) => {
@@ -382,17 +213,17 @@ const CitizenView: React.FC = () => {
     try {
     console.log('Selected tender details:', tender);
     
-      // 将选定的tender设置为selectedTender
+      // set selected tender
       setSelectedTender(tender);
       
       if (tender.status === 'AWARDED') {
-        // 如果tender已经被授予，尝试获取获奖者信息
+        // if tender has been awarded, try to get winner info
         await fetchWinnerInfo(Number(tender.id));
       } else {
         console.log('Tender is not awarded yet.');
       }
       
-      // 打开详情对话框
+      // open details dialog
       setOpenDetailsDialog(true);
     } catch (error) {
       console.error('Error handling tender details:', error);
@@ -400,12 +231,12 @@ const CitizenView: React.FC = () => {
     }
   };
 
-  // 添加一个函数来尝试获取获奖者信息
+  // add a function to try to get winner info
   const fetchWinnerInfo = async (tenderId: number) => {
     try {
       // Use the public winner endpoint for citizen view
       const cacheBuster = `?cacheBust=${new Date().getTime()}`;
-      const endpoint = `http://localhost:8000/api/public/tenders/${tenderId}/winner${cacheBuster}`;
+      const endpoint = `http://localhost:8000/api/tenders/${tenderId}/winner${cacheBuster}`;
       
       console.log(`Fetching winner info from ${endpoint}`);
       
@@ -441,121 +272,20 @@ const CitizenView: React.FC = () => {
               contact_email: contactEmail // Add contact email from winning company
             };
           });
-          console.log('Updated tender with winner information');
         } else {
-          console.log('No winner data available');
+          console.log('No winner data returned from API');
         }
       } else {
-        console.log(`Could not fetch winner information: ${response.status} ${response.statusText}`);
-        // Fall back to the old method as backup
-        fetchWinnerInfoFromBids(tenderId);
+        console.error(`Failed to fetch winner info: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Error fetching winner information:', error);
-      // Fall back to the old method as backup
-      fetchWinnerInfoFromBids(tenderId);
+      console.error('Error fetching winner info:', error);
     }
   };
 
-  // Backup method that tries to find winner from bids
+  // Function to fetch winner info from bids if direct winner info fails
   const fetchWinnerInfoFromBids = async (tenderId: number) => {
-    try {
-      console.log(`Fallback - Attempting to fetch bids for tender ${tenderId}`);
-      const token = localStorage.getItem('token');
-      
-      const cacheBuster = `?cacheBust=${new Date().getTime()}`;
-      const endpoint = `http://localhost:8000/api/tenders/${tenderId}/bids/${cacheBuster}`;
-      
-      console.log(`Falling back to bids fetch from ${endpoint}`);
-      
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-      }
-      
-      const response = await fetch(endpoint, { headers });
-      
-      if (response.ok) {
-        const bids = await response.json();
-        console.log('Fetched bids for tender:', bids);
-        
-        // Find the winning bid
-        const winningBid = bids.find((bid: any) => bid.is_winner === true);
-        
-        if (winningBid) {
-          console.log('Found winning bid:', winningBid);
-          setSelectedTender(prevTender => {
-            if (!prevTender) return prevTender;
-            return {
-              ...prevTender,
-              winner_name: winningBid.company_name,
-              winning_bid: winningBid.bidding_price.toString(),
-              award_date: winningBid.awarded_at || prevTender.award_date
-            };
-          });
-        } else {
-          console.log('No winning bid found among the bids');
-          // If no winning bid found but we know it's awarded, use sample data as last resort
-          if (selectedTender?.status === 'AWARDED') {
-            console.log('Using sample winner data as last resort');
-            const sampleWinner = {
-              name: 'Example Company (Sample)',
-              bid: (Number(selectedTender.budget) * 0.95).toString()
-            };
-            
-            setSelectedTender(prevTender => {
-              if (!prevTender) return prevTender;
-              return {
-                ...prevTender,
-                winner_name: sampleWinner.name + ' (SAMPLE DATA)',
-                winning_bid: sampleWinner.bid,
-                award_date: new Date().toISOString()
-            };
-          });
-          }
-        }
-      } else {
-        console.log(`Could not fetch bids: ${response.status} ${response.statusText}`);
-        // If response failed and we know it's awarded, use sample data
-        if (selectedTender?.status === 'AWARDED') {
-          generateSampleWinnerData();
-        }
-      }
-    } catch (error) {
-      console.error('Error in backup winner fetch:', error);
-      // If all else fails, generate sample data
-      if (selectedTender?.status === 'AWARDED') {
-        generateSampleWinnerData();
-      }
-    }
-  };
-  
-  // Function to generate sample winner data as last resort
-  const generateSampleWinnerData = () => {
-    if (!selectedTender) return;
-    
-    console.log('Generating sample winner data as last resort');
-    // Create sample data that clearly indicates it's a sample
-    const sampleWinnerNames = [
-      "Construction Excellence Ltd. (SAMPLE DATA)",
-      "Urban Development Group (SAMPLE DATA)",
-      "Metro Building Solutions (SAMPLE DATA)",
-      "Innovate Structures Inc. (SAMPLE DATA)",
-      "Quality Contractors Alliance (SAMPLE DATA)"
-    ];
-    
-    const winnerIndex = parseInt(selectedTender.id) % sampleWinnerNames.length;
-    const budgetValue = parseFloat(selectedTender.budget);
-    const bidPercentage = 0.95 + (parseInt(selectedTender.id) % 4) * 0.01; // 95-98%
-    const winningBid = Math.round(budgetValue * bidPercentage).toString();
-    
-    setSelectedTender({
-      ...selectedTender,
-      winner_name: sampleWinnerNames[winnerIndex],
-      winning_bid: winningBid,
-      award_date: new Date().toISOString()
-    });
+    // This implementation can be removed or simplified as needed
   };
 
   const handleCategoryChange = (event: SelectChangeEvent) => {
@@ -611,101 +341,16 @@ const CitizenView: React.FC = () => {
         setTenderHistory(sortedHistory);
       } else {
         console.log(`Could not fetch tender history: ${response.status} ${response.statusText}`);
-        // Generate sample history data as fallback
-        generateSampleHistory(tenderId);
+        // No fallback to sample data anymore
+        setTenderHistory([]);
       }
     } catch (error) {
       console.error('Error fetching tender history:', error);
-      // Generate sample history data as fallback
-      generateSampleHistory(tenderId);
+      // No fallback to sample data anymore
+      setTenderHistory([]);
     } finally {
       setLoadingHistory(false);
     }
-  };
-  
-  // Function to generate sample history data as fallback
-  const generateSampleHistory = (tenderId: number) => {
-    if (!selectedTender) return;
-
-    console.log('Generating sample history data');
-
-    const currentDate = new Date();
-    
-    // Create more comprehensive sample history with specific field changes
-    const sampleHistory = [
-      {
-        id: 1,
-        tender_id: tenderId,
-        field_name: "status",
-        old_value: "OPEN",
-        new_value: "AWARDED",
-        timestamp: new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        user: "admin@cityoffice.gov",
-        action: "UPDATE"
-      },
-      {
-        id: 2,
-        tender_id: tenderId,
-        field_name: "winner_id",
-        old_value: null,
-        new_value: "123",
-        timestamp: new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        user: "admin@cityoffice.gov",
-        action: "UPDATE"
-      },
-      {
-        id: 3,
-        tender_id: tenderId,
-        field_name: "budget",
-        old_value: "€450000.00",
-        new_value: "€500000.00",
-        timestamp: new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        user: "admin@cityoffice.gov",
-        action: "UPDATE"
-      },
-      {
-        id: 4,
-        tender_id: tenderId,
-        field_name: "description",
-        old_value: "Initial project description with basic requirements.",
-        new_value: "Updated project description with detailed requirements for construction including environmental considerations and accessibility standards.",
-        timestamp: new Date(currentDate.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-        user: "urban.planner@cityoffice.gov",
-        action: "UPDATE"
-      },
-      {
-        id: 5,
-        tender_id: tenderId,
-        field_name: "requirements",
-        old_value: "Standard construction requirements.",
-        new_value: "Enhanced quality standards, ISO 9001 certification required, minimum 5 years experience in similar projects, financial stability requirements, environmental protection measures must be detailed in proposals.",
-        timestamp: new Date(currentDate.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-        user: "quality.officer@cityoffice.gov",
-        action: "UPDATE"
-      },
-      {
-        id: 6,
-        tender_id: tenderId,
-        field_name: "submission_deadline",
-        old_value: new Date(currentDate.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-        new_value: new Date(currentDate.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-        timestamp: new Date(currentDate.getTime() - 55 * 24 * 60 * 60 * 1000).toISOString(),
-        user: "project.manager@cityoffice.gov",
-        action: "UPDATE"
-      },
-      {
-        id: 7,
-        tender_id: tenderId,
-        field_name: null,
-        old_value: null,
-        new_value: null,
-        timestamp: new Date(currentDate.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-        user: "system",
-        action: "CREATE"
-      }
-    ];
-
-    setTenderHistory(sampleHistory);
   };
 
   // Helper function to format field changes for display
@@ -748,6 +393,102 @@ const CitizenView: React.FC = () => {
         const fieldLabel = field_name.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         return `${fieldLabel} changed from "${old_value || 'none'}" to "${new_value}"`;
     }
+  };
+
+  // Add a component to display award information more attractively
+  interface AwardedInfoProps {
+    tender: {
+      id: number | string;
+      status: string;
+    };
+  }
+
+  interface WinnerInfo {
+    winning_price: number;
+    award_date: string;
+    winner?: string;
+    company_name?: string;
+    contact_email?: string;
+    phone?: string;
+    address?: string;
+    registration_number?: string;
+    description?: string;
+  }
+
+  const AwardedInfo: React.FC<AwardedInfoProps> = ({ tender }) => {
+    const [winnerInfo, setWinnerInfo] = useState<WinnerInfo | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+      const fetchWinnerInfo = async () => {
+        if (tender.status !== 'AWARDED') return;
+        
+        try {
+          setLoading(true);
+          const response = await fetch(`http://localhost:8000/api/tenders/${tender.id}/winner/`);
+          if (response.ok) {
+            const data = await response.json();
+            console.log("Winner data:", data);
+            setWinnerInfo(data);
+          }
+        } catch (error) {
+          console.error("Error fetching winner info:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchWinnerInfo();
+    }, [tender.id, tender.status]);
+
+    if (loading) {
+      return <CircularProgress size={20} />;
+    }
+
+    if (!winnerInfo) {
+      return null;
+    }
+
+    return (
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          mt: 2, 
+          bgcolor: '#4caf50', 
+          color: 'white',
+          borderRadius: 2
+        }}
+      >
+        <Typography variant="h6" gutterBottom>
+          Awarded Information
+        </Typography>
+        
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2">Winning Company</Typography>
+            <Typography variant="body1">{winnerInfo.company_name || winnerInfo.winner}</Typography>
+            
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2">Contact Email</Typography>
+              <Typography variant="body2">{winnerInfo.contact_email}</Typography>
+            </Box>
+          </Grid>
+          
+          <Grid item xs={12} sm={6}>
+            <Typography variant="subtitle2">Winning Bid</Typography>
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              €{winnerInfo.winning_price?.toLocaleString()}
+            </Typography>
+            
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2">Award Date</Typography>
+              <Typography variant="body2">{formatDate(winnerInfo.award_date)}</Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
   };
 
   if (loading) {
@@ -1014,60 +755,7 @@ const CitizenView: React.FC = () => {
                   
                     {/* Display awarded information for awarded tenders */}
                   {selectedTender.status === 'AWARDED' && (
-                    <>
-                      <Grid item xs={12}>
-                        <Box sx={{ 
-                          mt: 2, 
-                          mb: 2, 
-                          p: 2, 
-                            bgcolor: '#4CAF50', 
-                          borderRadius: 1,
-                          color: 'white'
-                        }}>
-                          <Typography variant="h6" sx={{ mb: 1, color: 'white', fontWeight: 'bold' }}>
-                            Awarded Information
-                          </Typography>
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'white' }}>
-                                  Winning Company
-                                </Typography>
-                                <Typography sx={{ color: 'white' }}>
-                                  {selectedTender.winner_name || 'Winner information not available'}
-                                </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'white' }}>
-                                  Winning Bid
-                                </Typography>
-                                <Typography sx={{ color: 'white' }}>
-                                  {selectedTender.winning_bid ? `€${selectedTender.winning_bid}` : 'Bid amount not available'}
-                                </Typography>
-                            </Grid>
-                              {selectedTender.award_date && (
-                                <Grid item xs={12} sm={6}>
-                                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'white' }}>
-                                    Award Date
-                                  </Typography>
-                                  <Typography sx={{ color: 'white' }}>
-                                    {formatDate(selectedTender.award_date)}
-                                  </Typography>
-                                </Grid>
-                              )}
-                              {selectedTender.contact_email && (
-                                <Grid item xs={12} sm={6}>
-                                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'white' }}>
-                                    Contact Email
-                                  </Typography>
-                                  <Typography sx={{ color: 'white' }}>
-                                    {selectedTender.contact_email}
-                                  </Typography>
-                                </Grid>
-                              )}
-                          </Grid>
-                        </Box>
-                      </Grid>
-                    </>
+                    <AwardedInfo tender={selectedTender} />
                   )}
 
                     {/* Public notice */}
